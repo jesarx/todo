@@ -48,15 +48,16 @@ CREATE TABLE IF NOT EXISTS tasks (
     list_id    int NOT NULL REFERENCES lists(id),
     title      text NOT NULL,
     notes      text NOT NULL DEFAULT '',
-    due_on     date,
     pinned     boolean NOT NULL DEFAULT false,
     done_at    timestamptz,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS tasks_list_idx ON tasks (list_id, done_at);
-CREATE INDEX IF NOT EXISTS tasks_due_idx  ON tasks (due_on) WHERE done_at IS NULL;
 CREATE INDEX IF NOT EXISTS tasks_done_idx ON tasks (done_at DESC);
+-- las tareas ya no llevan fecha límite: se hacen cuando se pueden
+DROP INDEX IF EXISTS tasks_due_idx;
+ALTER TABLE tasks DROP COLUMN IF EXISTS due_on;
 
 CREATE TABLE IF NOT EXISTS sessions (
     token      text PRIMARY KEY,
@@ -125,7 +126,11 @@ func main() {
 
 	// páginas
 	mux.HandleFunc("GET /{$}", app.requireAuth(app.home))
-	mux.HandleFunc("GET /hoy", app.requireAuth(app.todayPage))
+	mux.HandleFunc("GET /todas", app.requireAuth(app.boardPage))
+	// /hoy (la agenda por fecha) se retiró: los pendientes no llevan fecha
+	mux.HandleFunc("GET /hoy", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/todas", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("GET /buscar", app.requireAuth(app.searchPage))
 	mux.HandleFunc("GET /ajustes", app.requireAuth(app.settingsPage))
 	mux.HandleFunc("GET /t/{id}", app.requireAuth(app.taskPage))

@@ -5,9 +5,9 @@ Lista de pendientes personal, minimalista, mobile-first, para un solo usuario. U
 ## La lógica
 
 - **Secciones**: las pestañas de arriba (por defecto Personal, Trabajo y Casa). Se renombran, se reordenan y se borran desde Ajustes; hasta 6 y mínimo una. Al borrar una, sus tareas se mudan a la primera en vez de perderse.
-- **Tareas**: título y, si hace falta, notas y fecha límite. Se registra **cuándo se agregó y cuándo se terminó** cada una; las hechas se guardan con su fecha de término en un desplegable al final de la lista.
-- **Fechas límite**: la etiqueta se lee sola ("hoy", "mañana", "jueves", "venció 10 ago") y se pinta de ámbar o rojo según urja. **Hoy** junta lo vencido, lo de hoy y lo de la semana de todas las secciones; el globito rojo del encabezado cuenta lo vencido y lo de hoy.
-- **Orden**: primero las fijadas (★), luego las que tienen fecha (la más próxima arriba) y al final el resto por antigüedad.
+- **Tareas**: título y, si hace falta, notas. No hay fechas límite a propósito: cada cosa se hace cuando se puede. Sí se registra **cuándo se agregó y cuándo se terminó** cada una; las hechas se guardan con su fecha de término en un desplegable al final de la lista.
+- **Todas**: los pendientes de todas las secciones de un vistazo, una tarjeta por sección (en el celular una tras otra, en la computadora en columnas). Se pueden marcar y abrir sus notas ahí mismo.
+- **Orden**: primero las fijadas (★) y luego por antigüedad, lo más viejo arriba, que es lo que lleva más tiempo esperando.
 - **Notas con formato**: dentro de una tarea puedes escribir listas y se formatean solas.
 
   ```
@@ -21,7 +21,7 @@ Lista de pendientes personal, minimalista, mobile-first, para un solo usuario. U
   Todo se escapa antes de pintarse: una nota nunca puede inyectar HTML.
 - **Sin conexión**: la app abre con la última copia vista de cada página, y lo que agregues o marques sin red se guarda en una cola local que se sincroniza sola al volver la señal, en orden. Cada alta lleva un id único, así que un reintento nunca duplica; marcar o borrar algo que aún no se sube también funciona (viaja por su id local). La barra amarilla de arriba dice cuántos cambios faltan por subir.
 - **Búsqueda** en tareas y notas, abiertas y hechas.
-- **CSV** con todo (sección, tarea, notas, fecha límite, creada, terminada) desde Ajustes.
+- **CSV** con todo (sección, tarea, notas, fijada, agregada, terminada) desde Ajustes.
 
 ## Requisitos
 
@@ -125,9 +125,11 @@ pg_dump -Fc -U todo_user todo > backup_todo.dump
 cd /var/www/todo && git pull && go build -o todo . && sudo systemctl restart todo
 ```
 
+Las migraciones corren solas al arrancar. La versión que quitó las fechas límite borra de paso la columna `due_on`; las tareas, sus notas y sus fechas de alta y término no se tocan.
+
 ## Desarrollo
 
 ```bash
-go test ./...        # formato de notas, casillas, fechas y redirecciones
+go test ./...        # formato de notas, casillas y redirecciones
 go run ./tools/icon  # regenera los PNG del ícono desde el mismo dibujo del favicon
 ```
