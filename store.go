@@ -22,16 +22,22 @@ type Task struct {
 	ListName  string
 	Title     string
 	Notes     string
-	DueOn     sql.NullTime
 	Pinned    bool
 	DoneAt    sql.NullTime
 	CreatedAt time.Time
-	// calculados al leer, para que las plantillas no hagan cuentas de fechas
-	DueLabel string
-	DueState string // "over" | "today" | "soon" | ""
 }
 
-const taskCols = `t.id, t.list_id, l.name, t.title, t.notes, t.due_on, t.pinned, t.done_at, t.created_at`
+// Column es una sección con sus pendientes, para la vista de todas.
+type Column struct {
+	List  List
+	Tasks []Task
+}
+
+const taskCols = `t.id, t.list_id, l.name, t.title, t.notes, t.pinned, t.done_at, t.created_at`
+
+// orden de los pendientes: primero las fijadas, luego por antigüedad (lo más
+// viejo arriba, que es lo que lleva más tiempo esperando)
+const openOrder = `t.pinned DESC, t.created_at ASC, t.id ASC`
 
 const maxTitle = 300
 const maxNotes = 8000
@@ -70,11 +76,9 @@ func (a *App) firstListID() (int, error) {
 
 // ---- tareas ----
 
-// listTasks: abiertas por sección, con las fijadas arriba, luego las que
-// tienen fecha (la más próxima primero) y al final las demás por antigüedad.
+// listTasks: las de una sección, abiertas o hechas.
 func (a *App) listTasks(listID int, done bool) ([]Task, error) {
-	where, order, limit := `t.done_at IS NULL`,
-		`t.pinned DESC, (t.due_on IS NULL), t.due_on ASC, t.created_at ASC, t.id ASC`, 500
+	where, order, limit := `t.done_at IS NULL`, openOrder, 500
 	if done {
 		where, order, limit = `t.done_at IS NOT NULL`, `t.done_at DESC, t.id DESC`, 50
 	}
@@ -99,19 +103,31 @@ func (a *App) getTask(id int) (Task, error) {
 	return ts[0], nil
 }
 
-// agenda: todo lo abierto con fecha hasta dentro de una semana, de todas las
-// secciones. El handler lo parte en vencidas / hoy / próximas.
-func (a *App) agenda() ([]Task, error) {
-	return a.queryTasks(fmt.Sprintf(`SELECT %s FROM tasks t JOIN lists l ON l.id = t.list_id
-		WHERE t.done_at IS NULL AND t.due_on IS NOT NULL AND t.due_on <= $1::date + 7
-		ORDER BY t.due_on ASC, t.pinned DESC, t.id ASC`, taskCols), a.todayStr())
-}
-
-// dueCount: vencidas o para hoy, el número del globito en el encabezado.
-func (a *App) dueCount() (n int) {
-	a.db.QueryRow(`SELECT count(*) FROM tasks
-		WHERE done_at IS NULL AND due_on IS NOT NULL AND due_on <= $1::date`, a.todayStr()).Scan(&n)
-	return n
+// board: todos los pendientes de todas las secciones, ya agrupados y en el
+// orden de las pestañas. Una sola consulta; agrupar en Go sale más barato
+// que una consulta por sección.
+func (a *App) board() ([]Column, int, error) {
+	lists, err := a.listLists()
+	if err != nil {
+		return nil, 0, err
+	}
+	tasks, err := a.queryTasks(fmt.Sprintf(`SELECT %s FROM tasks t JOIN lists l ON l.id = t.list_id
+		WHERE t.done_at IS NULL ORDER BY l.position, l.id, %s`, taskCols, openOrder))
+	if err != nil {
+		return nil, 0, err
+	}
+	cols := make([]Column, len(lists))
+	at := make(map[int]int, len(lists))
+	for i, l := range lists {
+		cols[i] = Column{List: l}
+		at[l.ID] = i
+	}
+	for _, t := range tasks {
+		if i, ok := at[t.ListID]; ok {
+			cols[i].Tasks = append(cols[i].Tasks, t)
+		}
+	}
+	return cols, len(tasks), nil
 }
 
 func (a *App) searchTasks(q string) ([]Task, error) {
@@ -133,55 +149,18 @@ func (a *App) queryTasks(q string, args ...any) ([]Task, error) {
 	for rows.Next() {
 		var t Task
 		if err := rows.Scan(&t.ID, &t.ListID, &t.ListName, &t.Title, &t.Notes,
-			&t.DueOn, &t.Pinned, &t.DoneAt, &t.CreatedAt); err != nil {
+			&t.Pinned, &t.DoneAt, &t.CreatedAt); err != nil {
 			return nil, err
 		}
-		a.decorate(&t)
 		out = append(out, t)
 	}
 	return out, rows.Err()
 }
 
-// decorate traduce la fecha límite a una etiqueta legible ("hoy", "mañana",
-// "vencida · 3 mar") y a un estado que el CSS pinta con color.
-func (a *App) decorate(t *Task) {
-	if !t.DueOn.Valid {
-		return
-	}
-	days := daysBetween(a.today(), t.DueOn.Time)
-	switch {
-	case days < 0:
-		t.DueState, t.DueLabel = "over", "venció "+fmtDate(t.DueOn.Time)
-	case days == 0:
-		t.DueState, t.DueLabel = "today", "hoy"
-	case days == 1:
-		t.DueState, t.DueLabel = "soon", "mañana"
-	case days <= 6:
-		t.DueState, t.DueLabel = "soon", spanishDays[int(t.DueOn.Time.Weekday())]
-	default:
-		t.DueState, t.DueLabel = "", fmtDate(t.DueOn.Time)
-	}
-}
-
-// daysBetween cuenta días de calendario entre dos fechas ignorando husos:
-// el "date" de Postgres llega a medianoche UTC y hoy vive en la zona de la
-// app, así que solo comparamos año/mes/día.
-func daysBetween(from, to time.Time) int {
-	y1, m1, d1 := from.Date()
-	y2, m2, d2 := to.Date()
-	a := time.Date(y1, m1, d1, 0, 0, 0, 0, time.UTC)
-	b := time.Date(y2, m2, d2, 0, 0, 0, 0, time.UTC)
-	return int(b.Sub(a).Hours() / 24)
-}
-
-func (a *App) todayStr() string { return a.today().Format("2006-01-02") }
-
 // ---- formatos ----
 
 var spanishMonths = [...]string{"", "enero", "febrero", "marzo", "abril", "mayo", "junio",
 	"julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"}
-
-var spanishDays = [...]string{"domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"}
 
 // fmtDate: "3 mar" (o "3 mar 2025" si es de otro año).
 func (a *App) fmtDateY(t time.Time) string {

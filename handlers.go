@@ -20,7 +20,6 @@ func (a *App) parseTemplates() {
 		"date":  a.fmtDateY,
 		"when":  a.fmtWhen,
 		"notes": func(t Task) template.HTML { return renderNotes(t.ID, t.Notes) },
-		"day":   func(t sql.NullTime) string { return t.Time.Format("2006-01-02") },
 		// dict arma un contexto para el parcial de tarea, que necesita la
 		// tarea y el "volver a" de la pantalla donde se está pintando
 		"dict": func(kv ...any) map[string]any {
@@ -33,7 +32,7 @@ func (a *App) parseTemplates() {
 			return m
 		},
 	}
-	pages := []string{"login.html", "home.html", "task.html", "hoy.html", "buscar.html", "ajustes.html"}
+	pages := []string{"login.html", "home.html", "task.html", "todas.html", "buscar.html", "ajustes.html"}
 	a.tmpl = make(map[string]*template.Template, len(pages))
 	for _, p := range pages {
 		a.tmpl[p] = template.Must(template.New(p).Funcs(funcs).
@@ -48,15 +47,14 @@ func (a *App) render(w http.ResponseWriter, page string, data any) {
 	}
 }
 
-// page arma los datos comunes del cascarón (pestañas de arriba, título y el
-// globito de vencidas) para no repetirlos en cada handler.
+// page arma los datos comunes del cascarón (encabezado y título) para no
+// repetirlos en cada handler.
 func (a *App) page(nav, title string, data map[string]any) map[string]any {
 	if data == nil {
 		data = map[string]any{}
 	}
 	data["Nav"] = nav
 	data["Title"] = title
-	data["Due"] = a.dueCount()
 	return data
 }
 
@@ -94,27 +92,16 @@ func (a *App) home(w http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-// ---- agenda (Hoy) ----
+// ---- todas: los pendientes de todas las secciones de un vistazo ----
 
-func (a *App) todayPage(w http.ResponseWriter, r *http.Request) {
-	all, err := a.agenda()
+func (a *App) boardPage(w http.ResponseWriter, r *http.Request) {
+	cols, total, err := a.board()
 	if err != nil {
 		a.fail(w, err)
 		return
 	}
-	var over, today, soon []Task
-	for _, t := range all {
-		switch d := daysBetween(a.today(), t.DueOn.Time); {
-		case d < 0:
-			over = append(over, t)
-		case d == 0:
-			today = append(today, t)
-		default:
-			soon = append(soon, t)
-		}
-	}
-	a.render(w, "hoy.html", a.page("hoy", "Hoy", map[string]any{
-		"Over": over, "Today": today, "Soon": soon, "Back": "/hoy",
+	a.render(w, "todas.html", a.page("todas", "Todas", map[string]any{
+		"Cols": cols, "Total": total, "Back": "/todas", "Wide": true,
 	}))
 }
 
@@ -167,11 +154,6 @@ func (a *App) taskCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "notas demasiado largas", http.StatusBadRequest)
 		return
 	}
-	due, ok := parseDue(r.FormValue("due_on"))
-	if !ok {
-		http.Error(w, "fecha inválida", http.StatusBadRequest)
-		return
-	}
 	listID, err := a.resolveList(r.FormValue("list_id"))
 	if err != nil {
 		a.fail(w, err)
@@ -182,9 +164,9 @@ func (a *App) taskCreate(w http.ResponseWriter, r *http.Request) {
 		clientID = sql.NullString{String: v, Valid: true}
 	}
 	// idempotencia de la cola offline: reintentar el mismo registro no duplica
-	if _, err := a.db.Exec(`INSERT INTO tasks (client_id, list_id, title, notes, due_on, pinned)
-		VALUES ($1, $2, $3, $4, $5::date, $6) ON CONFLICT (client_id) DO NOTHING`,
-		clientID, listID, title, notes, due, r.FormValue("pinned") != ""); err != nil {
+	if _, err := a.db.Exec(`INSERT INTO tasks (client_id, list_id, title, notes, pinned)
+		VALUES ($1, $2, $3, $4, $5) ON CONFLICT (client_id) DO NOTHING`,
+		clientID, listID, title, notes, r.FormValue("pinned") != ""); err != nil {
 		a.fail(w, err)
 		return
 	}
@@ -203,19 +185,14 @@ func (a *App) taskUpdate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "notas demasiado largas", http.StatusBadRequest)
 		return
 	}
-	due, ok := parseDue(r.FormValue("due_on"))
-	if !ok {
-		http.Error(w, "fecha inválida", http.StatusBadRequest)
-		return
-	}
 	listID, err := a.resolveList(r.FormValue("list_id"))
 	if err != nil {
 		a.fail(w, err)
 		return
 	}
-	if _, err := a.db.Exec(`UPDATE tasks SET title = $1, notes = $2, due_on = $3::date,
-		list_id = $4, pinned = $5, updated_at = now() WHERE id = $6`,
-		title, notes, due, listID, r.FormValue("pinned") != "", id); err != nil {
+	if _, err := a.db.Exec(`UPDATE tasks SET title = $1, notes = $2,
+		list_id = $3, pinned = $4, updated_at = now() WHERE id = $5`,
+		title, notes, listID, r.FormValue("pinned") != "", id); err != nil {
 		a.fail(w, err)
 		return
 	}
@@ -324,17 +301,6 @@ func (a *App) resolveList(v string) (int, error) {
 		return id, nil
 	}
 	return a.firstListID()
-}
-
-func parseDue(s string) (sql.NullString, bool) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return sql.NullString{}, true
-	}
-	if _, err := time.Parse("2006-01-02", s); err != nil {
-		return sql.NullString{}, false
-	}
-	return sql.NullString{String: s, Valid: true}, true
 }
 
 // ---- secciones (pestañas de arriba, se administran en Ajustes) ----
@@ -470,7 +436,7 @@ func (a *App) purgeDone(w http.ResponseWriter, r *http.Request) {
 // exportCSV: respaldo legible de todo, por si algún día quieres irte a otra
 // herramienta (o solo revisar el histórico en una hoja de cálculo).
 func (a *App) exportCSV(w http.ResponseWriter, r *http.Request) {
-	rows, err := a.db.Query(`SELECT l.name, t.title, t.notes, t.due_on, t.pinned, t.created_at, t.done_at
+	rows, err := a.db.Query(`SELECT l.name, t.title, t.notes, t.pinned, t.created_at, t.done_at
 		FROM tasks t JOIN lists l ON l.id = t.list_id ORDER BY t.created_at`)
 	if err != nil {
 		a.fail(w, err)
@@ -481,26 +447,20 @@ func (a *App) exportCSV(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", `attachment; filename="todo.csv"`)
 	c := csv.NewWriter(w)
 	defer c.Flush()
-	c.Write([]string{"seccion", "tarea", "notas", "vence", "fijada", "creada", "terminada"})
+	c.Write([]string{"seccion", "tarea", "notas", "fijada", "agregada", "terminada"})
 	for rows.Next() {
 		var section, title, notes string
-		var due, done sql.NullTime
+		var done sql.NullTime
 		var pinned bool
 		var created time.Time
-		if err := rows.Scan(&section, &title, &notes, &due, &pinned, &created, &done); err != nil {
+		if err := rows.Scan(&section, &title, &notes, &pinned, &created, &done); err != nil {
 			return
-		}
-		// due_on es un "date": ya viene en el día correcto y moverlo de huso
-		// lo recorrería un día. Los sellos de tiempo sí van a la zona local.
-		dueStr := ""
-		if due.Valid {
-			dueStr = due.Time.Format("2006-01-02")
 		}
 		doneStr := ""
 		if done.Valid {
 			doneStr = done.Time.In(a.loc).Format("2006-01-02 15:04")
 		}
-		c.Write([]string{section, title, notes, dueStr,
+		c.Write([]string{section, title, notes,
 			map[bool]string{true: "sí", false: ""}[pinned],
 			created.In(a.loc).Format("2006-01-02 15:04"), doneStr})
 	}

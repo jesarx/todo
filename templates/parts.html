@@ -8,7 +8,6 @@
   <div class="body">
     <a class="title" href="/t/{{$t.ID}}">{{if $t.Pinned}}<span class="pinmark" aria-hidden="true">★</span> {{end}}{{$t.Title}}</a>
     <p class="meta">
-      {{if $t.DueLabel}}<span class="due {{$t.DueState}}">{{$t.DueLabel}}</span>{{end}}
       {{if .ShowList}}<span class="tag">{{$t.ListName}}</span>{{end}}
       {{if $t.DoneAt.Valid}}<span class="ok">hecha {{date $t.DoneAt.Time}}</span>{{else}}<span class="ago">agregada {{date $t.CreatedAt}}</span>{{end}}
     </p>

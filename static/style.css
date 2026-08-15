@@ -142,10 +142,6 @@ input:focus, select:focus, textarea:focus {
   display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
   margin-top: 3px; font-size: 12.5px; color: var(--faint);
 }
-.meta .due { color: var(--muted); }
-.meta .due.soon { color: var(--blue); }
-.meta .due.today { color: var(--amber); font-weight: 600; }
-.meta .due.over { color: var(--red); font-weight: 600; }
 .meta .ok { color: var(--acc); }
 .meta .tag {
   background: var(--card2); border-radius: 999px; padding: 1px 8px; color: var(--muted);
@@ -206,10 +202,28 @@ details.notes > summary::marker { color: var(--faint); }
 .detail { display: flex; flex-direction: column; gap: 12px; margin: 10px 0; }
 .danger-zone { margin-top: 22px; text-align: center; }
 
-/* ---- secciones de la agenda ---- */
+/* ---- encabezados de sección ---- */
 .sec { font-size: 14px; font-weight: 600; margin: 20px 0 2px; color: var(--muted); }
-.sec.over { color: var(--red); }
-.sec.today { color: var(--amber); }
+
+/* ---- todas: una tarjeta por sección; en el celular van una tras otra y en
+   pantalla grande se acomodan en columnas ---- */
+.board { display: grid; gap: 12px; grid-template-columns: 1fr; }
+.board .col {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 4px 14px 8px;
+}
+.colhead {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 0 6px; border-bottom: 1px solid var(--line); margin-bottom: 2px;
+  font-size: 13px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+}
+.colhead a { color: var(--acc); }
+.colhead .n {
+  background: var(--card2); color: var(--muted); border-radius: 999px;
+  padding: 1px 9px; font-size: 12px; font-weight: 600; letter-spacing: 0;
+}
+.board .tasks li.task { padding: 11px 0; }
+.board .empty.small { padding: 14px 0; font-size: 13px; }
 
 /* ---- búsqueda ---- */
 .searchbar { display: flex; gap: 8px; margin: 12px 0 16px; }
@@ -249,9 +263,12 @@ details summary { cursor: pointer; }
 /* ---- pantallas grandes: más aire, sin cambiar la lógica ---- */
 @media (min-width: 700px) {
   main { padding-top: 20px; }
+  main.wide { max-width: 1100px; }
   .tasks li.task { padding: 13px 4px; }
   .tick { width: 24px; height: 24px; }
   .topnav a { font-size: 15px; padding: 6px 12px; }
+  /* las columnas se llenan solas según quepan, y cada una crece lo que necesite */
+  .board { grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); align-items: start; gap: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

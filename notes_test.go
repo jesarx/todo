@@ -3,7 +3,6 @@ package main
 import (
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestRenderNotes(t *testing.T) {
@@ -84,28 +83,8 @@ func TestToggleCheck(t *testing.T) {
 	}
 }
 
-func TestDaysBetween(t *testing.T) {
-	mx, err := time.LoadLocation("America/Mexico_City")
-	if err != nil {
-		t.Skip("sin base de husos horarios")
-	}
-	// hoy a las 23:00 en México contra una fecha que Postgres entrega a
-	// medianoche UTC: deben seguir siendo el mismo día
-	hoy := time.Date(2026, 3, 5, 23, 0, 0, 0, mx)
-	vence := time.Date(2026, 3, 5, 0, 0, 0, 0, time.UTC)
-	if d := daysBetween(hoy, vence); d != 0 {
-		t.Errorf("mismo día: %d", d)
-	}
-	if d := daysBetween(hoy, vence.AddDate(0, 0, 1)); d != 1 {
-		t.Errorf("mañana: %d", d)
-	}
-	if d := daysBetween(hoy, vence.AddDate(0, 0, -3)); d != -3 {
-		t.Errorf("hace tres días: %d", d)
-	}
-}
-
 func TestSafeBack(t *testing.T) {
-	ok := []string{"/", "/?l=2", "/hoy", "/buscar?q=hola%20mundo", "/t/12"}
+	ok := []string{"/", "/?l=2", "/todas", "/buscar?q=hola%20mundo", "/t/12"}
 	bad := []string{"//evil.com", "https://evil.com", "evil.com", "/x\\y", "/x\ny", strings.Repeat("/a", 200)}
 	for _, v := range ok {
 		if !safeBack(v) {
@@ -114,20 +93,6 @@ func TestSafeBack(t *testing.T) {
 	}
 	for _, v := range bad {
 		if safeBack(v) {
-			t.Errorf("debería rechazar %q", v)
-		}
-	}
-}
-
-func TestParseDue(t *testing.T) {
-	if d, ok := parseDue("2026-08-20"); !ok || d.String != "2026-08-20" {
-		t.Errorf("fecha válida: %v %v", d, ok)
-	}
-	if d, ok := parseDue("  "); !ok || d.Valid {
-		t.Errorf("vacío debe ser NULL sin error: %v %v", d, ok)
-	}
-	for _, v := range []string{"20/08/2026", "2026-13-01", "hoy"} {
-		if _, ok := parseDue(v); ok {
 			t.Errorf("debería rechazar %q", v)
 		}
 	}

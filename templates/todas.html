@@ -1,0 +1,24 @@
+{{define "content"}}
+<h1>Todas</h1>
+<p class="muted small subsec">{{.Total}} pendiente{{if ne .Total 1}}s{{end}} en {{len .Cols}} {{if eq (len .Cols) 1}}sección{{else}}secciones{{end}}.</p>
+
+{{if .Total}}
+<div class="board">
+  {{range .Cols}}
+  <section class="col">
+    <h2 class="colhead">
+      <a href="/?l={{.List.ID}}">{{.List.Name}}</a>
+      <span class="n">{{len .Tasks}}</span>
+    </h2>
+    <ul class="tasks">
+    {{range .Tasks}}{{template "taskitem" (dict "T" . "Back" "/todas")}}{{else}}
+      <li class="empty small">Sin pendientes</li>
+    {{end}}
+    </ul>
+  </section>
+  {{end}}
+</div>
+{{else}}
+<p class="empty">No hay nada pendiente en ninguna sección. ✓</p>
+{{end}}
+{{end}}

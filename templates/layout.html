@@ -23,13 +23,13 @@
     <span>todo</span>
   </a>
   <nav class="topnav">
-    <a href="/hoy" class="{{if eq .Nav "hoy"}}on{{end}}">Hoy{{if .Due}}<span class="badge">{{.Due}}</span>{{end}}</a>
+    <a href="/todas" class="{{if eq .Nav "todas"}}on{{end}}">Todas</a>
     <a href="/buscar" class="{{if eq .Nav "buscar"}}on{{end}}">Buscar</a>
     <a href="/ajustes" class="{{if eq .Nav "ajustes"}}on{{end}}">Ajustes</a>
   </nav>
 </header>
 {{end}}
-<main>
+<main{{if .Wide}} class="wide"{{end}}>
 {{template "content" .}}
 </main>
 <script src="/static/app.js?v={{v}}"></script>
