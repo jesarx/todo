@@ -45,10 +45,12 @@ El esquema se crea solo al arrancar (migración automática con `IF NOT EXISTS`)
 ### 2. Compilar
 
 ```bash
-cd /var/www
-sudo git clone <tu-repo>/todo.git && cd todo
+sudo mkdir -p /var/www/todo && sudo chown $USER:$USER /var/www/todo
+git clone <tu-repo>/todo.git /var/www/todo && cd /var/www/todo
 go build -o todo .
 ```
+
+El repo debe ser **tuyo**, no de root: si lo clonas con `sudo`, git ve un dueño ajeno y el build falla con `error obtaining VCS status: exit status 128`. Si ya te pasó, se arregla con `sudo chown -R $USER:$USER /var/www/todo` (o compila una vez con `go build -buildvcs=false -o todo .`). El binario queda 755, que es todo lo que `www-data` necesita para ejecutarlo.
 
 (O compila en tu ThinkPad con `GOOS=linux GOARCH=amd64 go build -o todo .` y sube solo el binario con scp; todo va embebido.)
 
