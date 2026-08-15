@@ -1,0 +1,23 @@
+{{define "taskitem"}}{{$t := .T}}
+<li data-id="{{$t.ID}}" class="task{{if $t.Pinned}} pin{{end}}{{if $t.DoneAt.Valid}} isdone{{end}}">
+  <form method="post" action="/t/{{$t.ID}}/toggle" class="inline" data-offline data-optimistic="{{if $t.DoneAt.Valid}}open{{else}}done{{end}}">
+    <input type="hidden" name="set" value="{{if $t.DoneAt.Valid}}open{{else}}done{{end}}">
+    <input type="hidden" name="back" value="{{.Back}}">
+    <button class="tick{{if $t.DoneAt.Valid}} on{{end}}" aria-label="{{if $t.DoneAt.Valid}}Regresar a pendientes{{else}}Marcar como hecha{{end}}">{{if $t.DoneAt.Valid}}✓{{else}}○{{end}}</button>
+  </form>
+  <div class="body">
+    <a class="title" href="/t/{{$t.ID}}">{{if $t.Pinned}}<span class="pinmark" aria-hidden="true">★</span> {{end}}{{$t.Title}}</a>
+    <p class="meta">
+      {{if $t.DueLabel}}<span class="due {{$t.DueState}}">{{$t.DueLabel}}</span>{{end}}
+      {{if .ShowList}}<span class="tag">{{$t.ListName}}</span>{{end}}
+      {{if $t.DoneAt.Valid}}<span class="ok">hecha {{date $t.DoneAt.Time}}</span>{{else}}<span class="ago">agregada {{date $t.CreatedAt}}</span>{{end}}
+    </p>
+    {{if $t.Notes}}
+    <details class="notes">
+      <summary>Notas</summary>
+      <div class="notebody">{{notes $t}}</div>
+    </details>
+    {{end}}
+  </div>
+</li>
+{{end}}

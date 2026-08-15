@@ -1,0 +1,87 @@
+{{define "content"}}
+<h1>Ajustes</h1>
+
+<h2 class="sec">Secciones</h2>
+<p class="muted small subsec">Son las pestañas de arriba: hasta {{.Max}} y mínimo una. Nombres cortos (máx. {{.MaxName}} caracteres) para que quepan en la pantalla del celular.</p>
+
+{{range .Lists}}
+<div class="row">
+  <div>
+    <p>{{.Name}}</p>
+    <p class="muted small">{{.Open}} pendiente{{if ne .Open 1}}s{{end}}</p>
+  </div>
+  {{if gt (len $.Lists) 1}}
+  <div class="arrows">
+    <form method="post" action="/lista/{{.ID}}/mover" class="inline">
+      <input type="hidden" name="dir" value="up">
+      <button class="iconbtn" aria-label="Subir">↑</button>
+    </form>
+    <form method="post" action="/lista/{{.ID}}/mover" class="inline">
+      <input type="hidden" name="dir" value="down">
+      <button class="iconbtn" aria-label="Bajar">↓</button>
+    </form>
+  </div>
+  {{end}}
+  <details>
+    <summary>Editar</summary>
+    <form method="post" action="/lista/{{.ID}}" class="edit">
+      <input type="text" name="name" value="{{.Name}}" maxlength="{{$.MaxName}}" required>
+      <button class="btn">Guardar</button>
+    </form>
+    {{if gt (len $.Lists) 1}}
+    <form method="post" action="/lista/{{.ID}}/delete">
+      <button class="btn danger" data-confirm="¿Borrar esta sección? Sus tareas se mueven a la primera sección.">Borrar</button>
+    </form>
+    {{end}}
+  </details>
+</div>
+{{end}}
+
+{{if lt (len .Lists) .Max}}
+<details class="add-section">
+  <summary>+ Nueva sección</summary>
+  <form method="post" action="/lista" class="edit">
+    <input type="text" name="name" placeholder="Nombre (máx. {{.MaxName}})" maxlength="{{.MaxName}}" required>
+    <button class="btn primary">Agregar</button>
+  </form>
+</details>
+{{end}}
+
+<h2 class="sec">Tus tareas</h2>
+<div class="row">
+  <div>
+    <p>{{.Open}} pendiente{{if ne .Open 1}}s{{end}} · {{.Done}} hecha{{if ne .Done 1}}s{{end}}</p>
+    <p class="muted small">Las hechas se guardan con su fecha de término.</p>
+  </div>
+</div>
+<div class="edit">
+  <form method="post" action="/limpiar" class="inline">
+    <input type="hidden" name="days" value="30">
+    <button class="btn" data-confirm="¿Borrar las tareas hechas hace más de 30 días?">Limpiar hechas de +30 días</button>
+  </form>
+  <form method="post" action="/limpiar" class="inline">
+    <input type="hidden" name="days" value="0">
+    <button class="btn danger" data-confirm="¿Borrar TODAS las tareas hechas? No hay vuelta atrás.">Borrar todas las hechas</button>
+  </form>
+</div>
+<p class="export"><a href="/export.csv">Descargar todo en CSV</a></p>
+
+<h2 class="sec">Cómo escribir notas</h2>
+<div class="card notebody">
+  <p class="muted small">Dentro de las notas de cada tarea:</p>
+  <ul>
+    <li><code>* algo</code> o <code>- algo</code> → viñetas</li>
+    <li><code>1. algo</code> → lista numerada</li>
+    <li><code>[ ] algo</code> → casilla que se marca con un toque</li>
+    <li><code>**negritas**</code>, <code>_cursivas_</code>, <code>`código`</code></li>
+    <li>las ligas se vuelven enlaces solas</li>
+  </ul>
+</div>
+
+<h2 class="sec">Sin conexión</h2>
+<p class="muted small subsec">La app abre y funciona sin internet: lo que agregues o marques se guarda en el teléfono y se sincroniza solo al volver la señal. Si ves la barra amarilla arriba, todavía hay cosas por subir.</p>
+
+<form method="post" action="/logout" class="logout">
+  <button class="btn">Cerrar sesión</button>
+</form>
+{{end}}

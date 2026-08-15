@@ -1,0 +1,23 @@
+{{define "content"}}
+<h1>Hoy</h1>
+<p class="muted small subsec">Lo que tiene fecha, de todas las secciones.</p>
+
+{{if .Over}}
+<h2 class="sec over">Vencidas</h2>
+<ul class="tasks">{{range .Over}}{{template "taskitem" (dict "T" . "Back" $.Back "ShowList" true)}}{{end}}</ul>
+{{end}}
+
+{{if .Today}}
+<h2 class="sec today">Para hoy</h2>
+<ul class="tasks">{{range .Today}}{{template "taskitem" (dict "T" . "Back" $.Back "ShowList" true)}}{{end}}</ul>
+{{end}}
+
+{{if .Soon}}
+<h2 class="sec">Los próximos días</h2>
+<ul class="tasks">{{range .Soon}}{{template "taskitem" (dict "T" . "Back" $.Back "ShowList" true)}}{{end}}</ul>
+{{end}}
+
+{{if and (not .Over) (not .Today) (not .Soon)}}
+<p class="empty">Nada con fecha para esta semana.</p>
+{{end}}
+{{end}}

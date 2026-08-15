@@ -1,0 +1,57 @@
+{{define "content"}}
+{{$t := .T}}
+<p class="crumb"><a href="/?l={{$t.ListID}}">← {{$t.ListName}}</a></p>
+
+<div class="head">
+  <form method="post" action="/t/{{$t.ID}}/toggle" class="inline" data-offline>
+    <input type="hidden" name="set" value="{{if $t.DoneAt.Valid}}open{{else}}done{{end}}">
+    <input type="hidden" name="back" value="/t/{{$t.ID}}">
+    <button class="tick big{{if $t.DoneAt.Valid}} on{{end}}" aria-label="{{if $t.DoneAt.Valid}}Reabrir{{else}}Marcar como hecha{{end}}">{{if $t.DoneAt.Valid}}✓{{else}}○{{end}}</button>
+  </form>
+  <h1 class="tasktitle{{if $t.DoneAt.Valid}} isdone{{end}}">{{$t.Title}}</h1>
+</div>
+
+<p class="meta">
+  {{if $t.DueLabel}}<span class="due {{$t.DueState}}">{{$t.DueLabel}}</span>{{end}}
+  <span class="tag">{{$t.ListName}}</span>
+  {{if $t.Pinned}}<span class="tag">★ fijada</span>{{end}}
+</p>
+
+{{if $t.Notes}}<div class="notebody card">{{notes $t}}</div>{{end}}
+
+<div class="stamps">
+  <p>Agregada el {{when $t.CreatedAt}}</p>
+  {{if $t.DoneAt.Valid}}<p class="ok">Terminada el {{when $t.DoneAt.Time}}</p>{{end}}
+</div>
+
+<details class="editbox"{{if not $t.Notes}} open{{end}}>
+  <summary>Editar</summary>
+  <form method="post" action="/t/{{$t.ID}}" class="detail" data-offline>
+    <input type="hidden" name="back" value="/t/{{$t.ID}}">
+    <label class="field">Tarea
+      <textarea name="title" rows="2" maxlength="300" required>{{$t.Title}}</textarea>
+    </label>
+    <label class="field">Notas
+      <textarea name="notes" rows="8" placeholder="* viñetas&#10;1. numeradas&#10;[ ] casillas&#10;**negritas** y ligas">{{$t.Notes}}</textarea>
+    </label>
+    <div class="grid2">
+      <label class="field">Para el
+        <input type="date" name="due_on" value="{{if $t.DueOn.Valid}}{{day $t.DueOn}}{{end}}">
+      </label>
+      <label class="field">Sección
+        <select name="list_id">
+          {{range .Lists}}<option value="{{.ID}}"{{if eq .ID $t.ListID}} selected{{end}}>{{.Name}}</option>{{end}}
+        </select>
+      </label>
+    </div>
+    <label class="check"><input type="checkbox" name="pinned" value="1"{{if $t.Pinned}} checked{{end}}> Fijar arriba de la lista</label>
+    <button class="btn primary">Guardar</button>
+  </form>
+  <p class="muted small pad">En las notas: <code>*</code> hace viñetas, <code>1.</code> numera y <code>[ ]</code> deja casillas que se marcan con un toque.</p>
+</details>
+
+<form method="post" action="/t/{{$t.ID}}/delete" class="danger-zone">
+  <input type="hidden" name="back" value="/?l={{$t.ListID}}">
+  <button class="btn danger" data-confirm="¿Borrar esta tarea?">Borrar tarea</button>
+</form>
+{{end}}

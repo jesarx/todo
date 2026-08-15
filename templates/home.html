@@ -1,0 +1,35 @@
+{{define "content"}}
+<nav class="tabs">
+  {{range .Lists}}<a href="/?l={{.ID}}" class="{{if eq .ID $.Cur.ID}}on{{end}}">{{.Name}}{{if .Open}} <b>{{.Open}}</b>{{end}}</a>{{end}}
+</nav>
+
+<form method="post" action="/t" class="add" data-offline autocomplete="off">
+  <input type="hidden" name="client_id">
+  <input type="hidden" name="list_id" value="{{.Cur.ID}}">
+  <div class="addrow">
+    <input type="text" id="addtitle" name="title" maxlength="300" placeholder="Nueva tarea…" required>
+    <button class="btn primary">Agregar</button>
+  </div>
+  <details class="extra">
+    <summary>Notas y fecha</summary>
+    <textarea name="notes" rows="4" placeholder="Notas…&#10;* con viñetas&#10;[ ] o casillas"></textarea>
+    <label class="field">Para el <input type="date" name="due_on"></label>
+  </details>
+</form>
+
+<ul class="tasks" id="tasklist" data-list="{{.Cur.ID}}">
+{{range .Open}}{{template "taskitem" (dict "T" . "Back" $.Back)}}{{else}}
+<li class="empty" id="empty">Nada pendiente en {{.Cur.Name}}.</li>
+{{end}}
+</ul>
+
+{{if .Done}}
+<details class="donebox">
+  <summary>Hechas ({{.DoneTotal}})</summary>
+  <ul class="tasks">
+  {{range .Done}}{{template "taskitem" (dict "T" . "Back" $.Back)}}{{end}}
+  </ul>
+  {{if gt .DoneTotal 50}}<p class="muted small pad">Se muestran las 50 más recientes. Puedes limpiarlas en Ajustes.</p>{{end}}
+</details>
+{{end}}
+{{end}}

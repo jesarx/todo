@@ -1,0 +1,17 @@
+{{define "content"}}
+<h1>Buscar</h1>
+<form method="get" action="/buscar" class="searchbar">
+  <input type="search" name="q" value="{{.Q}}" placeholder="Texto de la tarea o de sus notas" autofocus>
+  <button class="btn">Buscar</button>
+</form>
+
+{{if .Searched}}
+  {{if .Results}}
+  <ul class="tasks">{{range .Results}}{{template "taskitem" (dict "T" . "Back" $.Back "ShowList" true)}}{{end}}</ul>
+  {{else}}
+  <p class="empty">Nada que se parezca a «{{.Q}}».</p>
+  {{end}}
+{{else}}
+<p class="muted small subsec">Busca en tareas abiertas y hechas, incluidas sus notas. Necesita conexión; sin ella la búsqueda no encuentra lo que está en la cola.</p>
+{{end}}
+{{end}}
