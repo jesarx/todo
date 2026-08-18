@@ -151,7 +151,8 @@
       if (!cid || list.querySelector('li[data-cid="' + cid + '"]')) return;
       var empty = document.getElementById("empty");
       if (empty) empty.remove();
-      list.appendChild(queuedItem(cid, p.get("title") || ""));
+      // en orden de la cola: el más nuevo acaba hasta arriba, como en el servidor
+      list.insertBefore(queuedItem(cid, p.get("title") || ""), list.firstChild);
     });
     Object.keys(done).forEach(function (cid) {
       var li = list.querySelector('li[data-cid="' + cid + '"]');
@@ -180,7 +181,7 @@
       if (list && input && cid) {
         var empty = document.getElementById("empty");
         if (empty) empty.remove();
-        list.appendChild(queuedItem(cid.value, input.value));
+        list.insertBefore(queuedItem(cid.value, input.value), list.firstChild);
       }
       if (input) input.value = "";
       var notes = f.querySelector('textarea[name="notes"]');
@@ -290,6 +291,58 @@
       b.disabled = false;
       delete b.dataset.lock;
     });
+  });
+
+  // ---- listas que se siguen solas en las notas ----
+  // Al dar Enter dentro de una lista, el renglón nuevo nace con la misma
+  // marca (*, -, 1., [ ]), como en las apps de mensajería. Si el renglón
+  // quedó vacío, ese segundo Enter quita la marca y sale de la lista.
+  // Shift+Enter siempre da un salto de renglón normal.
+
+  function listPrefix(line) {
+    var m = /^(\s*)((?:[-*+]\s+)?\[[ xX]\]\s+)(.*)$/.exec(line); // casilla
+    if (m) return { indent: m[1], next: m[2].replace(/\[[xX]\]/, "[ ]"), rest: m[3] };
+    m = /^(\s*)([-*+]\s+)(.*)$/.exec(line);                        // viñeta
+    if (m) return { indent: m[1], next: m[2], rest: m[3] };
+    m = /^(\s*)(\d{1,3})([.)]\s+)(.*)$/.exec(line);                 // numerada
+    if (m) return { indent: m[1], next: (parseInt(m[2], 10) + 1) + m[3], rest: m[4] };
+    return null;
+  }
+
+  // replaceRange escribe con execCommand cuando se puede: así el navegador
+  // conserva el deshacer (Ctrl+Z) del propio campo.
+  function replaceRange(el, start, end, text) {
+    el.focus();
+    el.setSelectionRange(start, end);
+    var ok = false;
+    try {
+      ok = document.execCommand(text ? "insertText" : "delete", false, text);
+    } catch (err) { ok = false; }
+    if (!ok) {
+      el.value = el.value.slice(0, start) + text + el.value.slice(end);
+      var at = start + text.length;
+      el.setSelectionRange(at, at);
+    }
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.isComposing || e.keyCode === 229) return;   // el teclado está componiendo
+    if (e.key !== "Enter" && e.keyCode !== 13) return;
+    if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+    var el = e.target;
+    if (!el || el.tagName !== "TEXTAREA" || el.name !== "notes") return;
+    if (el.selectionStart !== el.selectionEnd) return; // con texto seleccionado, normal
+    var pos = el.selectionStart;
+    var lineStart = el.value.lastIndexOf("\n", pos - 1) + 1;
+    var p = listPrefix(el.value.slice(lineStart, pos));
+    if (!p) return;
+    e.preventDefault();
+    if (p.rest.trim() === "") {
+      replaceRange(el, lineStart, pos, "");            // renglón vacío: se sale
+    } else {
+      replaceRange(el, pos, pos, "\n" + p.indent + p.next);
+    }
   });
 
   // ---- teclado (en la computadora) ----

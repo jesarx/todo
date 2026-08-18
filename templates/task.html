@@ -41,7 +41,7 @@
     <label class="check"><input type="checkbox" name="pinned" value="1"{{if $t.Pinned}} checked{{end}}> Fijar arriba de la lista</label>
     <button class="btn primary">Guardar</button>
   </form>
-  <p class="muted small pad">En las notas: <code>*</code> hace viñetas, <code>1.</code> numera y <code>[ ]</code> deja casillas que se marcan con un toque.</p>
+  <p class="muted small pad">En las notas: <code>*</code> hace viñetas, <code>1.</code> numera y <code>[ ]</code> deja casillas que se marcan con un toque. Al dar Enter la lista sigue sola; con el renglón vacío, otro Enter sale de ella.</p>
 </details>
 
 <form method="post" action="/t/{{$t.ID}}/delete" class="danger-zone">

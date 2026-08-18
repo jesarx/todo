@@ -7,7 +7,7 @@ Lista de pendientes personal, minimalista, mobile-first, para un solo usuario. U
 - **Secciones**: las pestañas de arriba (por defecto Personal, Trabajo y Casa). Se renombran, se reordenan y se borran desde Ajustes; hasta 6 y mínimo una. Al borrar una, sus tareas se mudan a la primera en vez de perderse.
 - **Tareas**: título y, si hace falta, notas. No hay fechas límite a propósito: cada cosa se hace cuando se puede. Sí se registra **cuándo se agregó y cuándo se terminó** cada una; las hechas se guardan con su fecha de término en un desplegable al final de la lista.
 - **Todas**: los pendientes de todas las secciones de un vistazo, una tarjeta por sección (en el celular una tras otra, en la computadora en columnas). Se pueden marcar y abrir sus notas ahí mismo.
-- **Orden**: primero las fijadas (★) y luego por antigüedad, lo más viejo arriba, que es lo que lleva más tiempo esperando.
+- **Orden**: primero las fijadas (★) y luego lo más reciente arriba, que es lo que uno acaba de anotar.
 - **Notas con formato**: dentro de una tarea puedes escribir listas y se formatean solas.
 
   ```
@@ -17,6 +17,8 @@ Lista de pendientes personal, minimalista, mobile-first, para un solo usuario. U
   [x] ya marcada
   **negritas**, _cursivas_, `código`, y las ligas se vuelven enlaces
   ```
+
+  Las listas **se siguen solas**: al dar Enter dentro de una, el renglón nuevo nace con la misma marca (y las numeradas avanzan solas). Un segundo Enter sobre el renglón vacío quita la marca y regresa al texto normal, como en las apps de mensajería. Shift+Enter siempre da un salto de renglón limpio.
 
   Todo se escapa antes de pintarse: una nota nunca puede inyectar HTML.
 - **Sin conexión**: la app abre con la última copia vista de cada página, y lo que agregues o marques sin red se guarda en una cola local que se sincroniza sola al volver la señal, en orden. Cada alta lleva un id único, así que un reintento nunca duplica; marcar o borrar algo que aún no se sube también funciona (viaja por su id local). La barra amarilla de arriba dice cuántos cambios faltan por subir.
