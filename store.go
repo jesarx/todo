@@ -35,9 +35,9 @@ type Column struct {
 
 const taskCols = `t.id, t.list_id, l.name, t.title, t.notes, t.pinned, t.done_at, t.created_at`
 
-// orden de los pendientes: primero las fijadas, luego por antigüedad (lo más
-// viejo arriba, que es lo que lleva más tiempo esperando)
-const openOrder = `t.pinned DESC, t.created_at ASC, t.id ASC`
+// orden de los pendientes: primero las fijadas y luego lo más reciente
+// arriba, que es lo que uno acaba de anotar y trae en la cabeza
+const openOrder = `t.pinned DESC, t.created_at DESC, t.id DESC`
 
 const maxTitle = 300
 const maxNotes = 8000
